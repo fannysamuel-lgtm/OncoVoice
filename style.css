@@ -1,0 +1,241 @@
+/* style.css — Visual design for Whisper Transcriber */
+
+/* ─── Variables ─────────────────────────────────────────────────────────────── */
+:root {
+  --bg:        #0c0c0f;
+  --surface:   #141418;
+  --border:    #2a2a35;
+  --accent:    #6ee7b7;   /* mint green */
+  --accent2:   #f472b6;   /* pink */
+  --text:      #e8e8f0;
+  --muted:     #6b6b80;
+  --radius:    14px;
+  --font-head: 'Syne', sans-serif;
+  --font-mono: 'DM Mono', monospace;
+}
+
+/* ─── Reset & Base ───────────────────────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow-x: hidden;
+}
+
+/* ─── Background Grid ────────────────────────────────────────────────────────── */
+.bg-grid {
+  position: fixed;
+  inset: 0;
+  background-image:
+    linear-gradient(rgba(110,231,183,.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(110,231,183,.04) 1px, transparent 1px);
+  background-size: 40px 40px;
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* ─── Container ──────────────────────────────────────────────────────────────── */
+.container {
+  position: relative;
+  z-index: 1;
+  width: min(540px, 94vw);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 40px 0;
+}
+
+/* ─── Header ─────────────────────────────────────────────────────────────────── */
+header {
+  text-align: center;
+}
+
+.logo {
+  font-size: 2.8rem;
+  margin-bottom: 8px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+h1 {
+  font-family: var(--font-head);
+  font-size: 2.4rem;
+  font-weight: 800;
+  letter-spacing: -1px;
+  color: var(--text);
+}
+
+h1 span {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  margin-top: 6px;
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+/* ─── Card ───────────────────────────────────────────────────────────────────── */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* ─── Drop Zone ──────────────────────────────────────────────────────────────── */
+.drop-zone {
+  border: 2px dashed var(--border);
+  border-radius: 10px;
+  padding: 36px 20px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color .2s, background .2s;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.drop-zone.drag-over {
+  border-color: var(--accent);
+  background: rgba(110,231,183,.05);
+}
+
+.drop-icon { font-size: 2rem; }
+
+.drop-label {
+  font-size: .9rem;
+  color: var(--muted);
+}
+
+.drop-or {
+  font-size: .75rem;
+  color: var(--border);
+}
+
+.file-name {
+  font-size: .78rem;
+  color: var(--accent);
+  min-height: 1.2em;
+}
+
+/* ─── Buttons ────────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 20px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: .85rem;
+  cursor: pointer;
+  transition: border-color .15s, background .15s, transform .1s;
+  text-decoration: none;
+}
+
+.btn:hover { border-color: var(--accent); background: rgba(110,231,183,.07); }
+.btn:active { transform: scale(.97); }
+
+.btn-primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #0c0c0f;
+  font-weight: 600;
+  font-size: .95rem;
+  padding: 12px;
+  width: 100%;
+}
+
+.btn-primary:hover { background: #86efac; border-color: #86efac; }
+.btn-primary:disabled {
+  opacity: .35;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.btn-sm { padding: 4px 12px; font-size: .78rem; }
+
+/* ─── Status / Loader ────────────────────────────────────────────────────────── */
+.status {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  justify-content: center;
+  color: var(--muted);
+  font-size: .85rem;
+}
+
+.spinner {
+  width: 18px; height: 18px;
+  border: 2px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ─── Result Card ────────────────────────────────────────────────────────────── */
+.result-card { animation: fadeUp .4s ease; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.result-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.result-label {
+  font-family: var(--font-head);
+  font-size: .7rem;
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+#result-text {
+  line-height: 1.7;
+  font-size: .9rem;
+  color: var(--text);
+  white-space: pre-wrap;
+}
+
+/* ─── Error Banner ───────────────────────────────────────────────────────────── */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 14px 18px;
+  background: rgba(244,63,94,.1);
+  border: 1px solid rgba(244,63,94,.3);
+  border-radius: var(--radius);
+  font-size: .85rem;
+  color: #fb7185;
+  animation: fadeUp .3s ease;
+}

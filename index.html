@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Whisper Transcriber</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;800&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+
+  <div class="bg-grid"></div>
+
+  <main class="container">
+
+    <header>
+      <div class="logo">🎙</div>
+      <h1>Whisper <span>Transcriber</span></h1>
+      <p class="subtitle">Drop a WAV file — get back words.</p>
+    </header>
+
+    <!-- Upload Card -->
+    <div class="card" id="upload-card">
+
+      <!-- Drop zone -->
+      <div class="drop-zone" id="drop-zone">
+        <div class="drop-icon">📂</div>
+        <p class="drop-label">Drag &amp; drop your <strong>.wav</strong> file here</p>
+        <p class="drop-or">— or —</p>
+        <label class="btn" for="file-input">Choose File</label>
+        <input type="file" id="file-input" accept=".wav,audio/wav" hidden />
+        <p class="file-name" id="file-name">No file selected</p>
+      </div>
+
+      <button class="btn btn-primary" id="transcribe-btn" disabled>
+        Transcribe
+      </button>
+
+    </div>
+
+    <!-- Status / Loader -->
+    <div class="status" id="status" hidden>
+      <div class="spinner"></div>
+      <span id="status-text">Sending to Whisper…</span>
+    </div>
+
+    <!-- Result Card -->
+    <div class="card result-card" id="result-card" hidden>
+      <div class="result-header">
+        <span class="result-label">Transcription</span>
+        <button class="btn btn-sm" id="copy-btn">Copy</button>
+      </div>
+      <p id="result-text"></p>
+    </div>
+
+    <!-- Error Banner -->
+    <div class="error-banner" id="error-banner" hidden>
+      <span>⚠️</span> <span id="error-text"></span>
+    </div>
+
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
