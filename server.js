@@ -7,7 +7,27 @@ const fs = require("fs");
 const OpenAI = require("openai");
 
 // ─── Setup ────────────────────────────────────────────────────────────────────
+// =====================
+// AI DATASET LOADING
+// =====================
 
+function loadDataset(folder, label) {
+  if (!fs.existsSync(folder)) return [];
+
+  return fs.readdirSync(folder)
+    .filter(f => f.endsWith(".wav"))
+    .map(file => ({
+      file: path.join(folder, file),
+      label
+    }));
+}
+
+const onco = loadDataset("./data/onco", 1);
+const normal = loadDataset("./data/normal", 0);
+
+const dataset = [...onco, ...normal];
+
+console.log("Samples loaded:", dataset.length);
 const app = express();
 const PORT = 3000;
 
