@@ -21,6 +21,22 @@ function loadDataset(folder, label) {
       label
     }));
 }
+// --- AI Training Functions ---
+
+async function prepareTrainingData() {
+  const trainingData = [];
+
+  for (const sample of dataset) {
+    const features = await extractFeatures(sample.file);
+
+    trainingData.push({
+      input: features,
+      output: [sample.label]
+    });
+  }
+
+  return trainingData;
+}
 
 const onco = loadDataset("./data/onco", 1);
 const normal = loadDataset("./data/normal", 0);
@@ -28,6 +44,19 @@ const normal = loadDataset("./data/normal", 0);
 const dataset = [...onco, ...normal];
 
 console.log("Samples loaded:", dataset.length);
+async function extractFeatures(filePath) {
+  const buffer = fs.readFileSync(filePath);
+  const audioData = await wav.decode(buffer);
+
+  const signal = audioData.channelData[0];
+
+  const features = Meyda.extract(
+    ["rms", "zcr", "spectralCentroid"],
+    signal
+  );
+
+  return Object.values(features);
+}
 const app = express();
 const PORT = 3000;
 
@@ -93,7 +122,21 @@ app.post("/transcribe", upload.single("audio"), async (req, res) => {
 });
 
 // ─── Start Server ─────────────────────────────────────────────────────────────
+let model;
 
+async function trainModel() {
+  const trainingData = await prepareTrainingData();
+
+  model = new brain.NeuralNetwork({
+    hiddenLayers: [5]
+  });
+
+  model.train(trainingData);
+
+  console.log("✅ AI Training Complete");
+}
+
+trainModel();
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
   console.log(`   Make sure OPENAI_API_KEY is set in your environment.`);
