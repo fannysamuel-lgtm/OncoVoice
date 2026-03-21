@@ -77,4 +77,7 @@ app.post("/transcribe", upload.single("audio"), async (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ Server running at http://localhost:${PORT}`);
   console.log(`   Make sure OPENAI_API_KEY is set in your environment.`);
+  const wav = require("wav-decoder");
+const Meyda = require("meyda");
+const brain = require("brain.js");
 });
