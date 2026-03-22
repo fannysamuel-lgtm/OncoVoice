@@ -1,0 +1,195 @@
+'use strict';
+
+const express = require('express');
+const fs      = require('fs');
+const path    = require('path');
+const multer  = require('multer');
+const brain   = require('brain.js');
+
+// ─── App & Neural Network Setup ───────────────────────────────────────────────
+
+const app = express();
+const PORT = 3000;
+
+const net = new brain.NeuralNetwork({
+  hiddenLayers: [3],
+});
+
+// ─── Multer (in-memory WAV uploads) ──────────────────────────────────────────
+
+const upload = multer({
+  storage: multer.memoryStorage(),
+  fileFilter: (_req, file, cb) => {
+    if (path.extname(file.originalname).toLowerCase() !== '.wav') {
+      return cb(new Error('Only .wav files are accepted.'));
+    }
+    cb(null, true);
+  },
+});
+
+// ─── Middleware ───────────────────────────────────────────────────────────────
+
+app.use(express.json());
+app.use(express.static(path.join(__dirname, 'public')));
+
+// ─── Dataset Loading ──────────────────────────────────────────────────────────
+
+/**
+ * Reads all .wav files from a folder and returns labelled records.
+ * @param {string} folderPath
+ * @param {number} label  1 = cancer, 0 = normal
+ * @returns {{ file: string, label: number }[]}
+ */
+function loadDataset(folderPath, label) {
+  const absPath = path.resolve(folderPath);
+
+  if (!fs.existsSync(absPath)) {
+    console.warn(`[WARN] Folder not found, skipping: ${absPath}`);
+    return [];
+  }
+
+  try {
+    return fs
+      .readdirSync(absPath)
+      .filter((f) => path.extname(f).toLowerCase() === '.wav')
+      .map((f) => ({ file: path.join(absPath, f), label }));
+  } catch (err) {
+    console.error(`[ERROR] Could not read folder "${absPath}":`, err.message);
+    return [];
+  }
+}
+
+// ─── Feature Extraction ───────────────────────────────────────────────────────
+
+/**
+ * Extracts a normalised numeric feature vector from a WAV file.
+ * Extend this function with real MFCC / spectral features when available.
+ *
+ * @param {string} filePath
+ * @returns {Promise<number[]>}
+ */
+async function extractFeatures(filePath) {
+  const buffer = fs.readFileSync(filePath);
+
+  const normLength = buffer.length / 100000;
+  const byteSum    = buffer.reduce((acc, b) => acc + b, 0);
+  const meanByte   = byteSum / buffer.length / 255;
+  const maxByte    = Math.max(...buffer) / 255;
+
+  // Clamp each feature to [0, 1] so brain.js trains stably
+  const clamp = (v) => Math.min(1, Math.max(0, v));
+
+  return [clamp(normLength), clamp(meanByte), clamp(maxByte)];
+}
+
+// ─── Training Data Preparation ────────────────────────────────────────────────
+
+/**
+ * Builds the brain.js training array from the dataset.
+ * @param {{ file: string, label: number }[]} dataset
+ * @returns {Promise<{ input: number[], output: number[] }[]>}
+ */
+async function prepareTrainingData(dataset) {
+  const trainingData = [];
+
+  for (const sample of dataset) {
+    try {
+      const features = await extractFeatures(sample.file);
+      trainingData.push({
+        input:  features,
+        output: [sample.label],
+      });
+    } catch (err) {
+      console.error(`[ERROR] Feature extraction failed for "${sample.file}":`, err.message);
+    }
+  }
+
+  return trainingData;
+}
+
+// ─── Routes ───────────────────────────────────────────────────────────────────
+
+/**
+ * POST /predict
+ * Accepts a WAV upload (field name: "audio"), runs it through the trained
+ * neural network, and returns a classification result.
+ */
+app.post('/predict', upload.single('audio'), async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'No WAV file uploaded. Use field name "audio".' });
+    }
+
+    const tmpPath = path.join(__dirname, `tmp_${Date.now()}_${req.file.originalname}`);
+
+    try {
+      fs.writeFileSync(tmpPath, req.file.buffer);
+      const features = await extractFeatures(tmpPath);
+      const result   = net.run(features);
+      const score    = Array.isArray(result) ? result[0] : result;
+
+      return res.json({
+        prediction: score > 0.5 ? 'Cancer Detected' : 'Normal Voice',
+        confidence: parseFloat(score.toFixed(4)),
+      });
+    } finally {
+      if (fs.existsSync(tmpPath)) fs.unlinkSync(tmpPath);
+    }
+  } catch (err) {
+    console.error('[ERROR] /predict:', err.message);
+    return res.status(500).json({ error: 'Prediction failed: ' + err.message });
+  }
+});
+
+// ─── 404 Fallback ─────────────────────────────────────────────────────────────
+
+app.use((req, res) => {
+  res.status(404).json({ error: `Route "${req.method} ${req.path}" not found.` });
+});
+
+// ─── Global Error Handler ─────────────────────────────────────────────────────
+
+app.use((err, _req, res, _next) => {
+  console.error('[ERROR] Unhandled:', err.message);
+  res.status(500).json({ error: err.message || 'Internal server error.' });
+});
+
+// ─── Bootstrap ────────────────────────────────────────────────────────────────
+
+(async () => {
+  try {
+    // 1. Load datasets
+    const onco   = loadDataset(path.join(__dirname, 'data', 'onco'),   1);
+    const normal = loadDataset(path.join(__dirname, 'data', 'normal'), 0);
+    const dataset = [...onco, ...normal];
+
+    console.log(`Samples loaded: ${dataset.length}`);
+
+    // 2. Prepare training data
+    const trainingData = await prepareTrainingData(dataset);
+    console.log(`Training samples ready: ${trainingData.length}`);
+
+    // 3. Train the model (only if we have samples)
+    if (trainingData.length > 0) {
+      console.log('Training started...');
+      net.train(trainingData, {
+        iterations: 2000,
+        log:        true,
+        logPeriod:  200,
+      });
+      console.log('Training completed.');
+    } else {
+      console.warn(
+        '[WARN] No training samples found. Add WAV files to data/onco and data/normal, then restart.'
+      );
+    }
+
+    // 4. Start HTTP server
+    app.listen(PORT, () => {
+      console.log(`Server running at http://localhost:${PORT}`);
+    });
+  } catch (err) {
+    console.error('[FATAL] Server failed to start:', err.message);
+    process.exit(1);
+  }
+})();
